@@ -1,52 +1,61 @@
 #include <stdio.h>
-#include "student_records.h"
+#include <stdlib.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include "client_server.h"
 
-int main()
+#define PORT 8080
+
+void start_server()
 {
-    int choice;
+    int server_fd, client_fd;
+    struct sockaddr_in server, client;
+    socklen_t client_len = sizeof(client);
 
-    printf("========================================\n");
-    printf(" DATABASE CLIENT-SERVER MANAGEMENT SYSTEM\n");
-    printf("========================================\n");
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
 
-    do
+    if (server_fd < 0)
     {
-        printf("\n1. Add Student");
-        printf("\n2. View Students");
-        printf("\n3. Update Student");
-        printf("\n4. Delete Student");
-        printf("\n5. Exit");
+        perror("Socket creation failed");
+        return;
+    }
 
-        printf("\nEnter choice: ");
-        scanf("%d", &choice);
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(PORT);
 
-        switch(choice)
-        {
-            case 1:
-                add_student();
-                break;
+    if (bind(server_fd, (struct sockaddr *)&server,
+             sizeof(server)) < 0)
+    {
+        perror("Bind failed");
+        close(server_fd);
+        return;
+    }
 
-            case 2:
-                view_students();
-                break;
+    if (listen(server_fd, 5) < 0)
+    {
+        perror("Listen failed");
+        close(server_fd);
+        return;
+    }
 
-            case 3:
-                update_student();
-                break;
+    printf("\nServer started on port %d\n", PORT);
+    printf("Waiting for client connection...\n");
 
-            case 4:
-                delete_student();
-                break;
+    client_fd = accept(server_fd,
+                       (struct sockaddr *)&client,
+                       &client_len);
 
-            case 5:
-                printf("\nProgram closed.\n");
-                break;
+    if (client_fd < 0)
+    {
+        perror("Accept failed");
+        close(server_fd);
+        return;
+    }
 
-            default:
-                printf("\nInvalid choice!\n");
-        }
+    printf("Client connected successfully!\n");
 
-    } while(choice != 5);
-
-    return 0;
+    close(client_fd);
+    close(server_fd);
 }
